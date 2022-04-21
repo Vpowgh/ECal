@@ -1,93 +1,99 @@
-plugin.Name = "TEST";
+//ECal Plugin for HomeRemote
+//Coming events from ICS calndar file
+//Developed by Vpow 2022
+
+plugin.Name = "ECal";
 plugin.OnChangeRequest = onChangeRequest;
 plugin.OnConnect = onConnect;
 plugin.OnDisconnect = onDisconnect;
 plugin.OnPoll = onPoll;
 plugin.OnSynchronizeDevices = onSynchronizeDevices;
-plugin.PollingInterval = 100000;
-plugin.DefaultSettings = {};
+plugin.PollingInterval = 43000000; //this is milliseconds, around 12h
+plugin.DefaultSettings = {"URL": ""};
 
 var http = new HTTPClient();
 
 function onChangeRequest(device, attribute, value) {
-    switch (attribute) {
-        case "Switch":
-            device.Switch = value;
-            break;
-        default:
-            break;
-    }
 }
 
 function onConnect() {
-    console.log("TEST connected");
 }
 
 function onDisconnect() {
-    console.log("TEST disconnected");
 }
 
 
 
 function zeroPad(num, places) {
-  var zero = places - num.toString().length + 1;
-  return Array(+(zero > 0 && zero)).join("0") + num;
+    var zero = places - num.toString().length + 1;
+    return Array(+(zero > 0 && zero)).join("0") + num;
 }
 
 
 function onPoll() {
-    console.log("TEST polling");
+
     try {
-        var response = http.get("https://calendar.google.com/calendar/ical/n8e4f4esqukia8a6lui41fq7jg@group.calendar.google.com/public/basic.ics", {responseType : "text"});
+        var response = http.get(plugin.Settings["URL"], {responseType : "text"});
     } catch(err) {
         //other than status 200 responses end up here, since HR treats them as exceptions
         console.log(err.message);
+        return;
     }
 
-    if(typeof response != "undefined") { //200 response received, update cache and last modified info
+    if(typeof response != "undefined") { //200 response received
+        //create timestamp for current date
         var dateObj = new Date();
         var newdate = dateObj.getUTCFullYear() + zeroPad(dateObj.getUTCMonth() + 1, 2) + zeroPad(dateObj.getUTCDate(), 2);
 
-        console.log(newdate);
-        
         var str = response.data;
-        
-        var startIndex = 0, index, indices = [];
+        var startIndex = 0, index, events = [];
+        var sdate, edate;
+
+        while((index = str.indexOf("DTSTART", startIndex)) > -1) {
+            var ii;
+            sdate = str.substr(index+8,8); //startdate timestamp
             
-        while ((index = str.indexOf("DTSTART", startIndex)) > -1) {
-            let edate = str.substr(index+8,8);
-            if(edate >= newdate) {
+            ii = str.indexOf("DTEND", index);
+            if(ii != -1) {
+                edate = str.substr(ii+6,8); //enddate timestamp
+                index = ii;
+            }
+            else {  //if end time missing just use starttime
+                edate = sdate;
+            }
+
+            ii = str.indexOf("SUMMARY", index);
+            if(ii != -1) {
+                index = ii;
+            }
+            else {  //if summary is missing then do not add event
+                startIndex = index;
+                continue;
+            }
+            
+            if( (sdate >= newdate) || ((sdate < newdate) && (edate >= newdate)) ) { //either event is in the future, or has started and event end is the future (multiday event)
                 let event = {};
-                event.date = str.substr(index+8,8);
-                event.year = parseInt(str.substr(index+8,4));
-                event.month = parseInt(str.substr(index+12,2));
-                event.day = parseInt(str.substr(index+14,2));
-
-                index = str.indexOf("SUMMARY", index);
+                event.date = sdate;
+                event.year = parseInt(sdate.substr(0,4));
+                event.month = parseInt(sdate.substr(4,2));
+                event.day = parseInt(sdate.substr(6,2));
                 event.summary = str.substring(index+8, str.indexOf("\n", index));
+                events.push(event);
+            }
 
-                indices.push(event);
-            }
-            else {
-                index = str.indexOf("SUMMARY", index);
-            }
-            
             startIndex = index;
-
-            //console.log(startIndex);
         }
 
-        indices.sort(function(a, b){return a.date - b.date}); 
+        //sort events based on date
+        events.sort(function(a, b){return a.date - b.date}); 
 
-       console.log(JSON.stringify(indices));
+        var device = plugin.Devices[1];
+
+        //update events
+        for(var i=0; (i<events.length) && (i<4); i++) { 
+            device['event'+i] = events[i].day + "." + events[i].month + ". " + events[i].summary;
+        }
     }
-
-    var device = plugin.Devices[1];
-
-    //update events
-    for(var i=0; (i<indices.length) && (i<4); i++) { 
-        device['event'+i] = indices[i].date + " " + indices[i].summary;
-    }    
 }
 
 function onSynchronizeDevices() {
