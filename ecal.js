@@ -90,7 +90,7 @@ function onPoll() {
         var device = plugin.Devices[1];
 
         //update events
-        for(var i=0; (i<events.length) && (i<4); i++) { 
+        for(var i=0; (i<events.length) && (i<5); i++) { 
             device['event'+i] = events[i].day + "." + events[i].month + ". " + events[i].summary;
         }
     }
