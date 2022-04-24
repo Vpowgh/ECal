@@ -1,5 +1,5 @@
 //ECal Plugin for HomeRemote
-//Coming events from ICS calndar file
+//Coming events from ICS calendar file
 //Developed by Vpow 2022
 
 plugin.Name = "ECal";
@@ -90,9 +90,18 @@ function onPoll() {
         var device = plugin.Devices[1];
 
         //update events
-        for(var i=0; (i<events.length) && (i<5); i++) { 
-            device['event'+i] = events[i].day + "." + events[i].month + ". " + events[i].summary;
+        for(var i=0; (i<events.length) && (i<10); i++) { 
+            device['event'+(i+1)] = events[i].day + "." + events[i].month + ". " + events[i].summary;
         }
+        
+        var elist;
+        elist = "[";
+        for(var i=0; (i<events.length) && (i<500); i++) { //limit to 500 in any case
+            elist = elist + "{" + "event:\"" + events[i].day + "." + events[i].month + ". " + events[i].summary + "\"},";
+        }
+        elist = elist.slice(0,-1) + "]";
+
+        device.eventlist = elist;
     }
 }
 
@@ -102,7 +111,7 @@ function onSynchronizeDevices() {
     cal1.DisplayName = "Event Calender 1";
     cal1.Capabilities = [];
     cal1.Attributes = [
-    "event0","event1","event2","event3","event4"
+    "eventlist", "event1", "event2", "event3" ,"event4", "event5", "event6", "event7", "event8", "event9", "event10"
     ];
 
     plugin.Devices[cal1.Id] = cal1;
