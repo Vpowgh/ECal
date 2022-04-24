@@ -1,5 +1,5 @@
 # ECal
-Plug-in for HomeRemote to fetch and parse ICS calendar file.
+Plug-in for HomeRemote to fetch and parse ICS calendar file for coming events.
 
 # Features
 Reads an ICS calendar file from given URL and parses coming events.
