@@ -100,7 +100,6 @@ function onPoll() {
             elist = elist + "{" + "event:\"" + events[i].day + "." + events[i].month + ". " + events[i].summary + "\"},";
         }
         elist = elist.slice(0,-1) + "]";
-
         device.eventlist = elist;
     }
 }
