@@ -47,7 +47,7 @@ function onPoll() {
 
         var str = response.data;
         var startIndex, endIndex, index, events = [];
-        var sdate, edate;
+        var sdate, edate, ssum, sdes;
         
         //simple check that it is actually calendar file
         startIndex = str.indexOf("BEGIN:VCALENDAR");
@@ -91,12 +91,24 @@ function onPoll() {
             //find summary within event
             ii = str.indexOf("SUMMARY", index);
             if( (ii != -1) && (ii < endIndex) ) {
-                index = ii;
+                ii = str.indexOf(":", ii);
+                ssum = ii+1;
             }
             else {  //if summary is missing then do not add event
                 startIndex = endIndex;
                 continue;
             }
+
+            //find description within event
+            ii = str.indexOf("DESCRIPTION", index);
+            if( (ii != -1) && (ii < endIndex) ) {
+                ii = str.indexOf(":", ii);
+                sdes = ii+1;
+            }
+            else {  //if description is missing
+                sdes = -1;
+            }
+
             
             //add event if all ok
             if( (sdate >= newdate) || ((sdate < newdate) && (edate >= newdate)) ) { //either event is in the future, or has started and event end is the future (multiday event)
@@ -105,7 +117,32 @@ function onPoll() {
                 event.year = parseInt(sdate.substr(0,4));
                 event.month = parseInt(sdate.substr(4,2));
                 event.day = parseInt(sdate.substr(6,2));
-                event.summary = str.substring(index+8, str.indexOf("\n", index));
+                event.summary = str.substring(ssum, str.indexOf("\r\n", ssum));
+   
+                //unfold description
+                var unfold = 1;
+                ii = sdes;
+                while(unfold) {
+                    ii = str.indexOf("\r\n", ii) + 2; //find end of CRLF
+                    if(str.charAt(ii) != " ") {
+                        unfold = 0;
+                    }
+                }
+                
+                //remove line separators and escapes
+                var s = str.substring(sdes, ii);
+                while(s.indexOf("\r\n ") > -1) { 
+                    s = s.replace("\r\n ","");
+                }
+                while(s.indexOf("\\") > -1) { 
+                    s = s.replace("\\","");
+                }
+                event.description = s;
+                 
+                 
+                
+   console.log(event.description);
+   
                 events.push(event);
             }
             
