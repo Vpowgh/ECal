@@ -46,31 +46,59 @@ function onPoll() {
         var newdate = dateObj.getUTCFullYear() + zeroPad(dateObj.getUTCMonth() + 1, 2) + zeroPad(dateObj.getUTCDate(), 2);
 
         var str = response.data;
-        var startIndex = 0, index, events = [];
+        var startIndex, endIndex, index, events = [];
         var sdate, edate;
+        
+        //simple check that it is actually calendar file
+        startIndex = str.indexOf("BEGIN:VCALENDAR");
+        if(startIndex == -1) {
+            return;
+        }
 
-        while((index = str.indexOf("DTSTART", startIndex)) > -1) {
+        while((index = str.indexOf("BEGIN:VEVENT", startIndex)) > -1) { //find start of an event
             var ii;
-            sdate = str.substr(index+8,8); //startdate timestamp
             
-            ii = str.indexOf("DTEND", index);
+            //find end of an event, if not found the file is not good
+            ii = str.indexOf("END:VEVENT", index);
             if(ii != -1) {
-                edate = str.substr(ii+6,8); //enddate timestamp
-                index = ii;
+                endIndex = ii;
+            }
+            else {
+                return;
+            }
+            
+            //find startdate within event
+            ii = str.indexOf("DTSTART", index);
+            if( (ii != -1) && (ii < endIndex) ) {
+                ii = str.indexOf(":", ii); //skip possible optional parameters
+                sdate = str.substr(ii+1,8);
+            }
+            else {  //if start time missing go to next event
+                startIndex = endIndex;
+                continue;
+            }
+            
+            //find enddate within event
+            ii = str.indexOf("DTEND", index);
+            if( (ii != -1) && (ii < endIndex) ) {
+                ii = str.indexOf(":", ii);
+                edate = str.substr(ii+1,8); //enddate timestamp
             }
             else {  //if end time missing just use starttime
                 edate = sdate;
             }
-
+            
+            //find summary within event
             ii = str.indexOf("SUMMARY", index);
-            if(ii != -1) {
+            if( (ii != -1) && (ii < endIndex) ) {
                 index = ii;
             }
             else {  //if summary is missing then do not add event
-                startIndex = index;
+                startIndex = endIndex;
                 continue;
             }
             
+            //add event if all ok
             if( (sdate >= newdate) || ((sdate < newdate) && (edate >= newdate)) ) { //either event is in the future, or has started and event end is the future (multiday event)
                 let event = {};
                 event.date = sdate;
@@ -80,8 +108,8 @@ function onPoll() {
                 event.summary = str.substring(index+8, str.indexOf("\n", index));
                 events.push(event);
             }
-
-            startIndex = index;
+            
+            startIndex = endIndex;
         }
 
         //sort events based on date
