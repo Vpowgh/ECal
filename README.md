@@ -20,5 +20,9 @@ The plugin uses following attributes to store data:
 "eventlist" can be used for example in HomeRemote GridView component. In ItemsSource put "yourdevice.eventlist" as Device Binding, and in TextMemberPath "event".
 
 # Release notes
+v1.1
+- Better handling of properties with optional parameters.
+- DESCRIPTION field now available.
+
 v1.0
 - Initial release.
