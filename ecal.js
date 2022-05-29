@@ -109,7 +109,6 @@ function onPoll() {
                 sdes = -1;
             }
 
-            
             //add event if all ok
             if( (sdate >= newdate) || ((sdate < newdate) && (edate >= newdate)) ) { //either event is in the future, or has started and event end is the future (multiday event)
                 let event = {};
@@ -124,26 +123,26 @@ function onPoll() {
                 ii = sdes;
                 while(unfold) {
                     ii = str.indexOf("\r\n", ii) + 2; //find end of CRLF
-                    if(str.charAt(ii) != " ") {
+                    if(str.charAt(ii) != " ") { //CRLF+space is line separator, just CRLF is end of description
                         unfold = 0;
                     }
                 }
                 
                 //remove line separators and escapes
                 var s = str.substring(sdes, ii);
-                while(s.indexOf("\r\n ") > -1) { 
+                while(s.indexOf("\r\n ") > -1) {
                     s = s.replace("\r\n ","");
                 }
-                while(s.indexOf("\\") > -1) { 
+                while(s.indexOf("\\") > -1) {
                     s = s.replace("\\","");
                 }
                 event.description = s;
-                 
-                 
-                
-   console.log(event.description);
-   
+
                 events.push(event);
+
+                console.log(event.date);
+                console.log(event.summary);
+                console.log(event.description);
             }
             
             startIndex = endIndex;
