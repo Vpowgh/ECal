@@ -46,42 +46,104 @@ function onPoll() {
         var newdate = dateObj.getUTCFullYear() + zeroPad(dateObj.getUTCMonth() + 1, 2) + zeroPad(dateObj.getUTCDate(), 2);
 
         var str = response.data;
-        var startIndex = 0, index, events = [];
-        var sdate, edate;
+        var startIndex, endIndex, index, events = [];
+        var sdate, edate, ssum, sdes;
+        
+        //simple check that it is actually calendar file
+        startIndex = str.indexOf("BEGIN:VCALENDAR");
+        if(startIndex == -1) {
+            return;
+        }
 
-        while((index = str.indexOf("DTSTART", startIndex)) > -1) {
+        while((index = str.indexOf("BEGIN:VEVENT", startIndex)) > -1) { //find start of an event
             var ii;
-            sdate = str.substr(index+8,8); //startdate timestamp
             
-            ii = str.indexOf("DTEND", index);
+            //find end of an event, if not found the file is not good
+            ii = str.indexOf("END:VEVENT", index);
             if(ii != -1) {
-                edate = str.substr(ii+6,8); //enddate timestamp
-                index = ii;
+                endIndex = ii;
+            }
+            else {
+                return;
+            }
+            
+            //find startdate within event
+            ii = str.indexOf("DTSTART", index);
+            if( (ii != -1) && (ii < endIndex) ) {
+                ii = str.indexOf(":", ii); //skip possible optional parameters
+                sdate = str.substr(ii+1,8);
+            }
+            else {  //if start time missing go to next event
+                startIndex = endIndex;
+                continue;
+            }
+            
+            //find enddate within event
+            ii = str.indexOf("DTEND", index);
+            if( (ii != -1) && (ii < endIndex) ) {
+                ii = str.indexOf(":", ii);
+                edate = str.substr(ii+1,8); //enddate timestamp
             }
             else {  //if end time missing just use starttime
                 edate = sdate;
             }
-
+            
+            //find summary within event
             ii = str.indexOf("SUMMARY", index);
-            if(ii != -1) {
-                index = ii;
+            if( (ii != -1) && (ii < endIndex) ) {
+                ii = str.indexOf(":", ii);
+                ssum = ii+1;
             }
             else {  //if summary is missing then do not add event
-                startIndex = index;
+                startIndex = endIndex;
                 continue;
             }
-            
+
+            //find description within event
+            ii = str.indexOf("DESCRIPTION", index);
+            if( (ii != -1) && (ii < endIndex) ) {
+                ii = str.indexOf(":", ii);
+                sdes = ii+1;
+            }
+            else {  //if description is missing
+                sdes = -1;
+            }
+
+            //add event if all ok
             if( (sdate >= newdate) || ((sdate < newdate) && (edate >= newdate)) ) { //either event is in the future, or has started and event end is the future (multiday event)
                 let event = {};
                 event.date = sdate;
                 event.year = parseInt(sdate.substr(0,4));
                 event.month = parseInt(sdate.substr(4,2));
                 event.day = parseInt(sdate.substr(6,2));
-                event.summary = str.substring(index+8, str.indexOf("\n", index));
+                event.summary = str.substring(ssum, str.indexOf("\r\n", ssum));
+   
+                //unfold description
+                var unfold = 1;
+                ii = sdes;
+                while(unfold) {
+                    ii = str.indexOf("\r\n", ii) + 2; //find end of CRLF
+                    if(str.charAt(ii) != " ") { //CRLF+space is line separator, just CRLF is end of description
+                        unfold = 0;
+                    }
+                }
+                
+                //remove line separators and escapes
+                var s = str.substring(sdes, ii);
+                while(s.indexOf("\r\n ") > -1) {
+                    s = s.replace("\r\n ","");
+                }
+                while(s.indexOf("\\") > -1) {
+                    s = s.replace("\\","");
+                }
+                //word wrap around 60 chars
+                s = s.replace(/(?![^\n]{1,60}$)([^\n]{1,60})\s/g, '$1\n');
+                event.description = s;
+
                 events.push(event);
             }
-
-            startIndex = index;
+            
+            startIndex = endIndex;
         }
 
         //sort events based on date
@@ -101,6 +163,13 @@ function onPoll() {
         }
         elist = elist.slice(0,-1) + "]";
         device.eventlist = elist;
+
+        elist = "[";
+        for(var i=0; (i<events.length) && (i<500); i++) { //limit to 500 in any case
+            elist = elist + "{" + "event:\"" + events[i].day + "." + events[i].month + ". " + events[i].summary + "\\n" + events[i].description + "\"},";
+        }
+        elist = elist.slice(0,-1) + "]";
+        device.longlist = elist;
     }
 }
 
@@ -110,7 +179,7 @@ function onSynchronizeDevices() {
     cal1.DisplayName = "Event Calender 1";
     cal1.Capabilities = [];
     cal1.Attributes = [
-    "eventlist", "event1", "event2", "event3" ,"event4", "event5", "event6", "event7", "event8", "event9", "event10"
+    "eventlist", "longlist", "event1", "event2", "event3" ,"event4", "event5", "event6", "event7", "event8", "event9", "event10"
     ];
 
     plugin.Devices[cal1.Id] = cal1;
