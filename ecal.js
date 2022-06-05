@@ -136,13 +136,11 @@ function onPoll() {
                 while(s.indexOf("\\") > -1) {
                     s = s.replace("\\","");
                 }
+                //word wrap around 60 chars
+                s = s.replace(/(?![^\n]{1,60}$)([^\n]{1,60})\s/g, '$1\n');
                 event.description = s;
 
                 events.push(event);
-
-                console.log(event.date);
-                console.log(event.summary);
-                console.log(event.description);
             }
             
             startIndex = endIndex;
@@ -165,6 +163,13 @@ function onPoll() {
         }
         elist = elist.slice(0,-1) + "]";
         device.eventlist = elist;
+
+        elist = "[";
+        for(var i=0; (i<events.length) && (i<500); i++) { //limit to 500 in any case
+            elist = elist + "{" + "event:\"" + events[i].day + "." + events[i].month + ". " + events[i].summary + "\\n" + events[i].description + "\"},";
+        }
+        elist = elist.slice(0,-1) + "]";
+        device.longlist = elist;
     }
 }
 
@@ -174,7 +179,7 @@ function onSynchronizeDevices() {
     cal1.DisplayName = "Event Calender 1";
     cal1.Capabilities = [];
     cal1.Attributes = [
-    "eventlist", "event1", "event2", "event3" ,"event4", "event5", "event6", "event7", "event8", "event9", "event10"
+    "eventlist", "longlist", "event1", "event2", "event3" ,"event4", "event5", "event6", "event7", "event8", "event9", "event10"
     ];
 
     plugin.Devices[cal1.Id] = cal1;
