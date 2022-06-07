@@ -118,26 +118,31 @@ function onPoll() {
                 event.day = parseInt(sdate.substr(6,2));
                 event.summary = str.substring(ssum, str.indexOf("\r\n", ssum));
    
-                //unfold description
-                var unfold = 1;
-                ii = sdes;
-                while(unfold) {
-                    ii = str.indexOf("\r\n", ii) + 2; //find end of CRLF
-                    if(str.charAt(ii) != " ") { //CRLF+space is line separator, just CRLF is end of description
-                        unfold = 0;
+                if(sdes != -1) {
+                    //unfold description
+                    var unfold = 1;
+                    ii = sdes;
+                    while(unfold) {
+                        ii = str.indexOf("\r\n", ii) + 2; //find end of CRLF
+                        if(str.charAt(ii) != " ") { //CRLF+space is line separator, just CRLF is end of description
+                            unfold = 0;
+                        }
                     }
+                    
+                    //remove line separators and escapes
+                    var s = str.substring(sdes, ii);
+                    while(s.indexOf("\r\n ") > -1) {
+                        s = s.replace("\r\n ","");
+                    }
+                    while(s.indexOf("\\") > -1) {
+                        s = s.replace("\\","");
+                    }
+                    //word wrap around 60 chars
+                    s = s.replace(/(?![^\n]{1,60}$)([^\n]{1,60})\s/g, '$1\n');
                 }
-                
-                //remove line separators and escapes
-                var s = str.substring(sdes, ii);
-                while(s.indexOf("\r\n ") > -1) {
-                    s = s.replace("\r\n ","");
+                else { //no description available
+                    s = "";
                 }
-                while(s.indexOf("\\") > -1) {
-                    s = s.replace("\\","");
-                }
-                //word wrap around 60 chars
-                s = s.replace(/(?![^\n]{1,60}$)([^\n]{1,60})\s/g, '$1\n');
                 event.description = s;
 
                 events.push(event);
