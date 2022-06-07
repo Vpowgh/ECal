@@ -128,15 +128,19 @@ function onPoll() {
                             unfold = 0;
                         }
                     }
-                    
+
                     //remove line separators and escapes
                     var s = str.substring(sdes, ii);
                     while(s.indexOf("\r\n ") > -1) {
                         s = s.replace("\r\n ","");
                     }
+                    while(s.indexOf("\\n") > -1) {
+                        s = s.replace("\\n"," ");
+                    }
                     while(s.indexOf("\\") > -1) {
                         s = s.replace("\\","");
                     }
+
                     //word wrap around 60 chars
                     s = s.replace(/(?![^\n]{1,60}$)([^\n]{1,60})\s/g, '$1\n');
                 }
