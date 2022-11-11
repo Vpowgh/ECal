@@ -20,6 +20,10 @@ The plugin uses following attributes to store data:
 "eventlist" and "longlist" can be used for example in HomeRemote GridView component. In ItemsSource put "yourdevice.eventlist" or "yourdevice.longlist" as Device Binding, and in TextMemberPath "event".
 
 # Release notes
+v1.2
+- Fix empty description handling
+- Better escape character handling in descriptions.
+
 v1.1
 - Better handling of properties with optional parameters.
 - "longlist" with DESCRIPTION field now available.
