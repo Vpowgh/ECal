@@ -47,7 +47,7 @@ function onPoll() {
 
         var str = response.data;
         var startIndex, endIndex, index, events = [];
-        var sdate, edate, ssum, sdes;
+        var sdate, edate, udate, ssum, sdes, evdates = [];
         
         //simple check that it is actually calendar file
         startIndex = str.indexOf("BEGIN:VCALENDAR");
@@ -57,6 +57,8 @@ function onPoll() {
 
         while((index = str.indexOf("BEGIN:VEVENT", startIndex)) > -1) { //find start of an event
             var ii;
+            
+            evdates.length = 0;
             
             //find end of an event, if not found the file is not good
             ii = str.indexOf("END:VEVENT", index);
@@ -108,50 +110,100 @@ function onPoll() {
             else {  //if description is missing
                 sdes = -1;
             }
-
-            //add event if all ok
-            if( (sdate >= newdate) || ((sdate < newdate) && (edate >= newdate)) ) { //either event is in the future, or has started and event end is the future (multiday event)
-                let event = {};
-                event.date = sdate;
-                event.year = parseInt(sdate.substr(0,4));
-                event.month = parseInt(sdate.substr(4,2));
-                event.day = parseInt(sdate.substr(6,2));
-                event.summary = str.substring(ssum, str.indexOf("\r\n", ssum));
-   
-                if(sdes != -1) {
-                    //unfold description
-                    var unfold = 1;
-                    ii = sdes;
-                    while(unfold) {
-                        ii = str.indexOf("\r\n", ii) + 2; //find end of CRLF
-                        if(str.charAt(ii) != " ") { //CRLF+space is line separator, just CRLF is end of description
-                            unfold = 0;
-                        }
-                    }
-
-                    //remove line separators and escapes
-                    var s = str.substring(sdes, ii);
-                    while(s.indexOf("\r\n ") > -1) {
-                        s = s.replace("\r\n ","");
-                    }
-                    while(s.indexOf("\\n") > -1) {
-                        s = s.replace("\\n"," ");
-                    }
-                    while(s.indexOf("\\") > -1) {
-                        s = s.replace("\\","");
-                    }
-
-                    //word wrap around 60 chars
-                    s = s.replace(/(?![^\n]{1,60}$)([^\n]{1,60})\s/g, '$1\n');
+            
+            //find recurrence
+            ii = str.indexOf("RRULE", index);
+            if( (ii != -1) && (ii < endIndex) ) {
+                console.log("recurrent");
+                let tmp;
+                let freq;
+                
+                tmp = str.indexOf("FREQ=WEEKLY", ii);
+                if( (tmp != -1) && (tmp < endIndex) ) {
+                    freq = 604800000; //one week in ms
+                    console.log("weekly");
                 }
-                else { //no description available
-                    s = "";
+                
+                tmp = str.indexOf("UNTIL=", ii);
+                if( (tmp != -1) && (tmp < endIndex) ) {
+                    udate = str.substr(tmp+6,8); //untildate timestamp
+                    if(udate < newdate) { //all in past, nothing to add
+                        continue;
+                    }
                 }
-                event.description = s;
-
-                events.push(event);
+                else { //forever.. give it a year from today
+                    tmp = parseInt(newdate.substr(0,4))+1;
+                    udate = tmp.toString() + newdate.substr(4,4);
+                }
+                console.log(udate);
+                
+                
+                let sdate_ms = Date.parse(sdate.substr(0,4) + "-" + sdate.substr(4,2) + "-" + sdate.substr(6,2));
+                let udate_ms = Date.parse(udate.substr(0,4) + "-" + udate.substr(4,2) + "-" + udate.substr(6,2));
+                let newdate_ms = Date.parse(newdate.substr(0,4) + "-" + newdate.substr(4,2) + "-" + newdate.substr(6,2));
+                let recdate = sdate_ms;
+                
+                do {
+                    if(recdate >= newdate_ms) { //take only future dates
+                        tmp = new Date(recdate);
+                        tmp = tmp.getUTCFullYear() + zeroPad(tmp.getUTCMonth() + 1, 2) + zeroPad(tmp.getUTCDate(), 2);
+                        evdates.push(tmp);
+                        console.log(tmp);
+                    }
+                    recdate = recdate + freq;
+                } while(recdate <= udate_ms);
             }
             
+            if(evdates.length == 0) { //add single event if there were no recurrent events
+                evdates.push(sdate);
+            }
+            
+            for(ii=0; ii < evdates.length; ++ii) {
+                sdate = evdates[ii];
+                
+                //add event if all ok
+                if( (sdate >= newdate) || ((sdate < newdate) && (sdate >= newdate)) ) { //either event is in the future, or has started and event end is the future (multiday event)
+                    let event = {};
+                    event.date = sdate;
+                    event.year = parseInt(sdate.substr(0,4));
+                    event.month = parseInt(sdate.substr(4,2));
+                    event.day = parseInt(sdate.substr(6,2));
+                    event.summary = str.substring(ssum, str.indexOf("\r\n", ssum));
+       
+                    if(sdes != -1) {
+                        //unfold description
+                        var unfold = 1;
+                        ii = sdes;
+                        while(unfold) {
+                            ii = str.indexOf("\r\n", ii) + 2; //find end of CRLF
+                            if(str.charAt(ii) != " ") { //CRLF+space is line separator, just CRLF is end of description
+                                unfold = 0;
+                            }
+                        }
+
+                        //remove line separators and escapes
+                        var s = str.substring(sdes, ii);
+                        while(s.indexOf("\r\n ") > -1) {
+                            s = s.replace("\r\n ","");
+                        }
+                        while(s.indexOf("\\n") > -1) {
+                            s = s.replace("\\n","");
+                        }
+                        while(s.indexOf("\\") > -1) {
+                            s = s.replace("\\","");
+                        }
+
+                        //word wrap around 60 chars
+                        s = s.replace(/(?![^\n]{1,60}$)([^\n]{1,60})\s/g, '$1\n');
+                    }
+                    else { //no description available
+                        s = "";
+                    }
+                    event.description = s;
+
+                    events.push(event);
+                }
+            }
             startIndex = endIndex;
         }
 
