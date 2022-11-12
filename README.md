@@ -21,6 +21,7 @@ The plugin uses following attributes to store data:
 
 # Release notes
 v1.2
+- Add support to recurrent events (daily, weekly, monthly)
 - Fix empty description handling
 - Better escape character handling in descriptions.
 
