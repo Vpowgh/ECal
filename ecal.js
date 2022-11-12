@@ -56,7 +56,7 @@ function onPoll() {
         }
 
         while((index = str.indexOf("BEGIN:VEVENT", startIndex)) > -1) { //find start of an event
-            var ii;
+            var ii, iii;
             
             evdates.length = 0;
             
@@ -118,10 +118,20 @@ function onPoll() {
                 let tmp;
                 let freq;
                 
+                tmp = str.indexOf("FREQ=DAILY", ii);
+                if( (tmp != -1) && (tmp < endIndex) ) {
+                    freq = 24*60*60*1000; //one day in ms
+                    console.log("daily");
+                }
                 tmp = str.indexOf("FREQ=WEEKLY", ii);
                 if( (tmp != -1) && (tmp < endIndex) ) {
-                    freq = 604800000; //one week in ms
+                    freq = 7*24*60*60*1000; //one week in ms
                     console.log("weekly");
+                }
+                tmp = str.indexOf("FREQ=MONTHLY", ii);
+                if( (tmp != -1) && (tmp < endIndex) ) {
+                    //monthly to be done
+                    console.log("monthy");
                 }
                 
                 tmp = str.indexOf("UNTIL=", ii);
@@ -135,8 +145,6 @@ function onPoll() {
                     tmp = parseInt(newdate.substr(0,4))+1;
                     udate = tmp.toString() + newdate.substr(4,4);
                 }
-                console.log(udate);
-                
                 
                 let sdate_ms = Date.parse(sdate.substr(0,4) + "-" + sdate.substr(4,2) + "-" + sdate.substr(6,2));
                 let udate_ms = Date.parse(udate.substr(0,4) + "-" + udate.substr(4,2) + "-" + udate.substr(6,2));
@@ -148,7 +156,6 @@ function onPoll() {
                         tmp = new Date(recdate);
                         tmp = tmp.getUTCFullYear() + zeroPad(tmp.getUTCMonth() + 1, 2) + zeroPad(tmp.getUTCDate(), 2);
                         evdates.push(tmp);
-                        console.log(tmp);
                     }
                     recdate = recdate + freq;
                 } while(recdate <= udate_ms);
@@ -158,11 +165,12 @@ function onPoll() {
                 evdates.push(sdate);
             }
             
-            for(ii=0; ii < evdates.length; ++ii) {
-                sdate = evdates[ii];
+            
+            for(iii=0; iii < evdates.length; iii++) {
+                sdate = evdates[iii];
                 
                 //add event if all ok
-                if( (sdate >= newdate) || ((sdate < newdate) && (sdate >= newdate)) ) { //either event is in the future, or has started and event end is the future (multiday event)
+                if( (sdate >= newdate) || ((sdate < newdate) && (edate >= newdate)) ) { //either event is in the future, or has started and event end is the future (multiday event)
                     let event = {};
                     event.date = sdate;
                     event.year = parseInt(sdate.substr(0,4));
