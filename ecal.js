@@ -138,6 +138,7 @@ function onPoll() {
                 if( (tmp != -1) && (tmp < endIndex) ) {
                     udate = str.substr(tmp+6,8); //untildate timestamp
                     if(udate < newdate) { //all in past, nothing to add
+                        startIndex = endIndex;
                         continue;
                     }
                 }
