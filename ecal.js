@@ -8,7 +8,7 @@ plugin.OnConnect = onConnect;
 plugin.OnDisconnect = onDisconnect;
 plugin.OnPoll = onPoll;
 plugin.OnSynchronizeDevices = onSynchronizeDevices;
-plugin.PollingInterval = 43000000; //this is milliseconds, around 12h
+plugin.PollingInterval = 900000; //this is milliseconds 15min
 plugin.DefaultSettings = {"URL": ""};
 
 var http = new HTTPClient();
